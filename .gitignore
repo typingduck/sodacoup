@@ -5,6 +5,13 @@
 *.so
 *.dylib
 
+# vim
+.*.swp
+.*.swo
+
+# test files
+*.sample
+
 # Test binary, built with `go test -c`
 *.test
 
@@ -13,3 +20,6 @@
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
+
+# binary
+sodacoup

@@ -1,2 +1,2 @@
-# sodacoup
+# soda coup
 Sudoku play code
