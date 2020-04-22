@@ -1,0 +1,2 @@
+# sodacoup
+Sudoku play code
