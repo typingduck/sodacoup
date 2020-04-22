@@ -39,7 +39,8 @@ func NewSudokuSquare(stringRepresentation string) (*SudokuSquare, error) {
 
 // Solve TODO.....
 func (sud *SudokuSquare) Solve() error {
-	return nil
+	_, e := backTrack(sud)
+	return e
 }
 
 func (sud SudokuSquare) String() string {
