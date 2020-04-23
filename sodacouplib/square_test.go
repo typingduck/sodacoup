@@ -73,7 +73,6 @@ func TestNewSudokuSquare(t *testing.T) {
 
 	})
 	t.Run("not valid sudoku", func(t *testing.T) {
-		t.Skip() // TODO...
 		invalidPuzzle := `
 			555 555 555
 			555 555 555
@@ -112,4 +111,40 @@ func TestToString(t *testing.T) {
 
 		assert.Equal(t, expected, result)
 	}
+}
+
+func TestLoadingInitialProblem(t *testing.T) {
+	initial := `
+		1_3 456 789
+		456 789 123
+		789 123 456
+
+		234 567 891
+		567 891 234
+		891 234 567
+
+		345 678 912
+		678 912 345
+		912 345 678
+	`
+
+	s, err := NewSudokuSquare(initial)
+
+	if err != nil {
+		t.Fatalf("got unexpected error from valid input: %s", err)
+	}
+
+	c1 := s.cells[0][0]
+	assert.Equal(t, true, c1.isSet)
+	assert.Equal(t, uint8(1), c1.value)
+	assert.Equal(t, false, c1.hasCandidate(1))
+	assert.Equal(t, false, c1.hasCandidate(2))
+	assert.Equal(t, false, c1.hasCandidate(3))
+
+	c2 := s.cells[0][1]
+	assert.Equal(t, false, c2.isSet)
+
+	assert.Equal(t, false, c2.hasCandidate(1))
+	assert.Equal(t, true, c2.hasCandidate(2))
+	assert.Equal(t, false, c2.hasCandidate(3))
 }
