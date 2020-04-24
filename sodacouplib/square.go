@@ -73,6 +73,7 @@ func newEmptySudoku() *SudokuSquare {
 // Solve does the magic.
 func (sud *SudokuSquare) Solve() error {
 	heuristicAlgorithms := []sudokuAlgo{
+		sanityCheck,
 		nakedSingle,
 		hiddenSingle,
 		pointingPair,
@@ -267,6 +268,53 @@ func isSolved(sud *SudokuSquare) bool {
 		}
 	}
 	return true
+}
+
+// Both ensures the problem is a valid sudoku and that the SudokuSquare doesn't
+// get into an invalid state by programming bugs.
+func sanityCheck(sud *SudokuSquare) (bool, error) {
+	// check individual cells are correct
+	_, err := applyToCells(sud, func(cell *SudokuCell) (bool, error) {
+		if cell.isSet {
+			if !(cell.value >= 1 && cell.value <= 9) {
+				return false, fmt.Errorf("cell %d,%d marked set but no value found", cell.row, cell.col)
+			}
+		} else if !(cell.candidates > 0) {
+			return false, fmt.Errorf("cell %d,%d marked unset but no candidates available", cell.row, cell.col)
+		}
+		return false, nil
+	})
+	if err != nil {
+		return false, err
+	}
+
+	// check each row/column/block are correct
+	return applyToNonagons(sud, func(niner nonagon) (bool, error) {
+		var setValues [10]int
+		var availableValues [10]int
+
+		for _, cell := range niner.cells {
+			if cell.isSet {
+				setValues[cell.value] = setValues[cell.value] + 1
+			} else {
+				for val := 1; val <= 9; val++ {
+					if cell.hasCandidate(val) {
+						availableValues[val] = availableValues[val] + 1
+					}
+				}
+
+			}
+		}
+		for val := 1; val <= 9; val++ {
+			if setValues[val] > 1 {
+				return false, fmt.Errorf("%s two values set for %d", niner.name, val)
+			} else if setValues[val] != 1 && availableValues[val] == 0 {
+				return false, fmt.Errorf("%s no candidates available for %d", niner.name, val)
+			}
+		}
+
+		return false, nil
+	})
 }
 
 type nonagonFunction func(nonagon) (bool, error)
