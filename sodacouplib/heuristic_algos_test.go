@@ -161,6 +161,85 @@ func TestHiddenSingle(t *testing.T) {
 	})
 }
 
+func TestPointingPair(t *testing.T) {
+	t.Run("horizontal pointing pairs should remove from row", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow := arbitraryRow()
+		tcol1, tcol2 := arbitraryTwoColsSameBlock()
+		N := arbitraryValue()
+
+		// when all cells in a block as unavailable for N except two
+		// in same block
+		blockR, blockC := trow-(trow%3), tcol1-(tcol1%3)
+		for row := blockR; row < blockR+3; row++ {
+			for col := blockC; col < blockC+3; col++ {
+				if row != trow || (col != tcol1 && col != tcol2) {
+					s.cells[row][col].removeCandidate(N)
+				}
+			}
+		}
+
+		for col := 0; col < 9; col++ {
+			outSideTestBlock := col/3 != blockC/3
+			if outSideTestBlock {
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N))
+			}
+		}
+
+		// then pointing pair
+		apply(t, pointingPair, s)
+
+		// should remove from rest of row
+		for col := 0; col < 9; col++ {
+			outSideTestBlock := col/3 != blockC/3
+			if outSideTestBlock {
+				assert.Equal(t, false, s.cells[trow][col].hasCandidate(N))
+			}
+		}
+
+		// second time should be no-op
+		noOpCheck(t, pointingPair, s)
+	})
+	t.Run("vertical pointing pairs should remove from column", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow1, trow2 := arbitraryTwoRowsSameBlock()
+		tcol := arbitraryCol()
+		N := arbitraryValue()
+
+		// mark all cells in a block as unavailable for N except two
+		// in same block on same column
+		blockR, blockC := trow1-(trow1%3), tcol-(tcol%3)
+		for row := blockR; row < blockR+3; row++ {
+			for col := blockC; col < blockC+3; col++ {
+				if col != tcol || (row != trow1 && row != trow2) {
+					s.cells[row][col].removeCandidate(N)
+				}
+			}
+		}
+
+		for row := 0; row < 9; row++ {
+			outSideTestBlock := row/3 != blockR/3
+			if outSideTestBlock {
+				assert.Equal(t, true, s.cells[row][tcol].hasCandidate(N))
+			}
+		}
+
+		apply(t, pointingPair, s)
+
+		for row := 0; row < 9; row++ {
+			outSideTestBlock := row/3 != blockR/3
+			if outSideTestBlock {
+				assert.Equal(t, false, s.cells[row][tcol].hasCandidate(N))
+			}
+		}
+
+		// second time should be no-op
+		noOpCheck(t, pointingPair, s)
+	})
+}
+
 func arbitraryRow() int {
 	r := rand.Intn(9)
 	log.Println("using row:", r)
@@ -179,27 +258,46 @@ func arbitraryValue() int {
 	return n
 }
 
-func rand2N(l int) (int, int) {
-	if l <= 1 {
-		panic("")
-	}
-	a := rand.Intn(l)
+func rand2N() (int, int) {
+	a := rand.Intn(9)
 	for {
-		b := rand.Intn(l)
+		b := rand.Intn(9)
 		if a != b {
 			return a, b
 		}
 	}
 }
 
+func rand2NBlock() (int, int) {
+	for {
+		a := rand.Intn(9)
+		b := rand.Intn(9)
+		if a != b && a/3 == b/3 {
+			return a, b
+		}
+	}
+}
+
 func arbitraryTwoRows() (int, int) {
-	r1, r2 := rand2N(9)
+	r1, r2 := rand2N()
 	log.Println("using rows:", r1, r2)
 	return r1, r2
 }
 
+func arbitraryTwoRowsSameBlock() (int, int) {
+	r1, r2 := rand2NBlock()
+	log.Println("using rows:", r1, r2)
+	return r1, r2
+}
+
+func arbitraryTwoColsSameBlock() (int, int) {
+	c1, c2 := rand2NBlock()
+	log.Println("using cols:", c1, c2)
+	return c1, c2
+}
+
 func arbitraryTwoValues() (int, int) {
-	a, b := rand2N(9)
+	a, b := rand2N()
 	v1, v2 := a+1, b+1
 	log.Println("using values:", v1, v2)
 	return v1, v2

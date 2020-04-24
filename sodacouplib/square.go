@@ -75,6 +75,7 @@ func (sud *SudokuSquare) Solve() error {
 	heuristicAlgorithms := []sudokuAlgo{
 		nakedSingle,
 		hiddenSingle,
+		pointingPair,
 	}
 
 	e := untilTrue(func() (bool, error) {
@@ -278,6 +279,23 @@ func applyToNonagons(sud *SudokuSquare, fns ...nonagonFunction) (bool, error) {
 	for _, fn := range fns {
 		for _, s := range sud.nines {
 			b, e := fn(s)
+			if e != nil {
+				return false, e
+			}
+			result = result || b
+		}
+	}
+	return result, nil
+}
+
+type blockFunction func(blkRowStart, blkRowEnd, blkColStart, blkColEnd int) (bool, error)
+
+func applyToBlocks(sud *SudokuSquare, fn blockFunction) (bool, error) {
+	result := false
+	for blkRowStart := 0; blkRowStart < 9; blkRowStart += 3 {
+		for blkColStart := 0; blkColStart < 9; blkColStart += 3 {
+			blkRowEnd, blkColEnd := blkRowStart+2, blkColStart+2
+			b, e := fn(blkRowStart, blkRowEnd, blkColStart, blkColEnd)
 			if e != nil {
 				return false, e
 			}
