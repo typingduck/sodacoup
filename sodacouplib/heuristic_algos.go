@@ -24,3 +24,33 @@ func nakedSingle(sud *SudokuSquare) (bool, error) {
 		return changes, nil
 	})
 }
+
+// where a value is only fits into 1 of the 9 cells of a row/col/block
+func hiddenSingle(sud *SudokuSquare) (bool, error) {
+	return applyToNonagons(sud, func(nona nonagon) (bool, error) {
+		changes := false
+		for val := 1; val <= 9; val++ {
+			availablePlaces := 0
+			idx := -1
+			for i, cell := range nona.cells {
+				if cell.hasCandidate(val) {
+					availablePlaces++
+					idx = i
+					if availablePlaces >= 2 {
+						break
+					}
+				}
+			}
+			if availablePlaces == 1 {
+				cell := nona.cells[idx]
+				if e := sud.setCell(cell.row, cell.col, val); e != nil {
+					return false, e
+				}
+				changes = true
+				log.Printf("%s has hidden single at %d,%d for value %d",
+					nona.name, cell.row, cell.col, val)
+			}
+		}
+		return changes, nil
+	})
+}

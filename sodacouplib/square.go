@@ -11,6 +11,7 @@ import (
 // SudokuSquare Wraps the square in some useful constructs.
 type SudokuSquare struct {
 	cells [9][9]SudokuCell
+	nines *[3 * 9]nonagon // lazy created, see description of nonagon struct below
 }
 
 // SudokuCell adds a little info to each cell to make heuristic algorithms easier.
@@ -21,6 +22,15 @@ type SudokuCell struct {
 	value      byte // 0 -> 9 inclusive (0 for unset)
 	isSet      bool
 	candidates uint16 // bitmask 2^1 -> 2^9 of still valid cell numbers
+}
+
+// A nonagon is a generic way to access the 9 cells of a row, column or block.
+// Some heuristic algorithms behave the same for each of those three, so
+// by putting in a layer of indirection those algorithms don't have to be
+// written three times.
+type nonagon struct {
+	name  string
+	cells [9]*SudokuCell // pointers to the cells that make up this row/column/block.
 }
 
 // NewSudokuSquare Create a SudokuSquare struct given a string that
@@ -64,6 +74,7 @@ func newEmptySudoku() *SudokuSquare {
 func (sud *SudokuSquare) Solve() error {
 	heuristicAlgorithms := []sudokuAlgo{
 		nakedSingle,
+		hiddenSingle,
 	}
 
 	e := untilTrue(func() (bool, error) {
@@ -255,6 +266,72 @@ func isSolved(sud *SudokuSquare) bool {
 		}
 	}
 	return true
+}
+
+type nonagonFunction func(nonagon) (bool, error)
+
+func applyToNonagons(sud *SudokuSquare, fns ...nonagonFunction) (bool, error) {
+	if sud.nines == nil {
+		sud.createNonagons()
+	}
+	result := false
+	for _, fn := range fns {
+		for _, s := range sud.nines {
+			b, e := fn(s)
+			if e != nil {
+				return false, e
+			}
+			result = result || b
+		}
+	}
+	return result, nil
+}
+
+func (sud *SudokuSquare) createNonagons() {
+	var n [3 * 9]nonagon
+
+	s := 0
+
+	// rows
+	for row := 0; row < 9; row++ {
+		var rows [9]*SudokuCell
+		for col := 0; col < 9; col++ {
+			rows[col] = &sud.cells[row][col]
+		}
+		name := fmt.Sprintf("   row  %d", row)
+		n[s] = nonagon{name, rows}
+		s++
+	}
+
+	// cols
+	for col := 0; col < 9; col++ {
+		var cols [9]*SudokuCell
+		for row := 0; row < 9; row++ {
+			cols[row] = &sud.cells[row][col]
+		}
+		name := fmt.Sprintf(" column %d", col)
+		n[s] = nonagon{name, cols}
+		s++
+	}
+
+	// squares
+	naming := func(a int) int { return (a / 3) }
+	for si := 0; si < 9; si += 3 {
+		for sj := 0; sj < 9; sj += 3 {
+			var cells [9]*SudokuCell
+			idx := 0
+			for row := si; row < si+3; row++ {
+				for col := sj; col < sj+3; col++ {
+					cells[idx] = &sud.cells[row][col]
+					idx++
+				}
+			}
+			name := fmt.Sprintf("block %d %d", naming(si), naming(sj))
+			n[s] = nonagon{name, cells}
+			s++
+		}
+	}
+	sud.nines = &n
 }
 
 // Run until true, but wth the safety of failing after some large amount of iterations.
