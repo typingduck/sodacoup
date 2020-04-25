@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math/bits"
 	"strings"
 	"unicode"
 )
@@ -81,7 +82,6 @@ func (sud *SudokuSquare) Solve() error {
 	}
 
 	e := untilTrue(func() (bool, error) {
-		log.Println(sud)
 		changesMade := false
 		for _, fn := range heuristicAlgorithms {
 			impacting, err := fn(sud)
@@ -90,6 +90,7 @@ func (sud *SudokuSquare) Solve() error {
 			}
 			if impacting {
 				log.Println("...done applying:", getFunctionName(fn))
+				log.Println(sud.asTableStringWithCandidates())
 			}
 			changesMade = changesMade || impacting
 		}
@@ -115,7 +116,7 @@ func (c SudokuCell) String() string {
 	if c.isSet {
 		return fmt.Sprintf("[%d,%d => %d]", c.row, c.col, c.value)
 	}
-	return fmt.Sprintf("[%d,%d ? %d]", c.row, c.col, c.candidates)
+	return fmt.Sprintf("[%d,%d ? %s]", c.row, c.col, c.candidateString())
 }
 
 func filterValidChars(s string) string {
@@ -180,6 +181,65 @@ func (sud SudokuSquare) asTableString() string {
 		}
 	}
 	return sb.String()
+}
+
+func (sud SudokuSquare) asTableStringWithCandidates() string {
+	numFormat, strFormat := "%d", "%s"
+	hr := strings.Repeat("-", 2*9+7) + "\n"
+	maxCandidates := 0
+	for r := 0; r < 9; r++ {
+		for c := 0; c < 9; c++ {
+			cell := sud.cells[r][c]
+			if !cell.isSet {
+				c := bits.OnesCount16(cell.candidates)
+				if c > maxCandidates {
+					maxCandidates = c
+				}
+			}
+		}
+	}
+	if maxCandidates > 0 {
+		numFormat = fmt.Sprintf("%%%dd", maxCandidates+2)
+		strFormat = fmt.Sprintf("%%%ds", maxCandidates+2)
+		hr = strings.Repeat("-", (maxCandidates+3)*9+7) + "\n"
+	}
+	var sb strings.Builder
+	sb.WriteByte('\n')
+	sb.WriteString(hr)
+	for r := 0; r < 9; r++ {
+		sb.WriteByte('|')
+		for c := 0; c < 9; c++ {
+			cell := sud.cells[r][c]
+			sb.WriteByte(' ')
+			if cell.isSet {
+				fmt.Fprintf(&sb, numFormat, cell.value)
+			} else {
+				fmt.Fprintf(&sb, strFormat, cell.candidateString())
+			}
+			if c%3 == 2 {
+				sb.WriteString(" |")
+			}
+		}
+		sb.WriteByte('\n')
+		if r%3 == 2 {
+			sb.WriteString(hr)
+		}
+	}
+	return sb.String()
+}
+
+func maskToString(mask uint16) string {
+	var sb strings.Builder
+	for n := 1; n <= 9; n++ {
+		if (1<<n)&mask > 0 {
+			fmt.Fprintf(&sb, "%d", n)
+		}
+	}
+	return sb.String()
+}
+
+func (c SudokuCell) candidateString() string {
+	return fmt.Sprintf("(%s)", maskToString(c.candidates))
 }
 
 func (c *SudokuCell) removeCandidate(val int) {
