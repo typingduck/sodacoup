@@ -77,6 +77,7 @@ func (sud *SudokuSquare) Solve() error {
 		nakedSingle,
 		hiddenSingle,
 		pointingPair,
+		claimingPair,
 	}
 
 	e := untilTrue(func() (bool, error) {

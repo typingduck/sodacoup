@@ -240,6 +240,85 @@ func TestPointingPair(t *testing.T) {
 	})
 }
 
+func TestClaimingPair(t *testing.T) {
+	t.Run("horizontal claiming pair should remove from block", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow := arbitraryRow()
+		tcol := arbitraryCol()
+		N := arbitraryValue()
+
+		// mark all cells in a row as unavailable for N except inside
+		// the test block
+		blockR, blockC := trow-(trow%3), tcol-(tcol%3)
+		for col := 0; col < 9; col++ {
+			outSideTestBlock := col/3 != blockC/3
+			if outSideTestBlock {
+				s.cells[trow][col].removeCandidate(N)
+			}
+		}
+
+		for row := blockR; row < blockR+3; row++ {
+			if row != trow {
+				for col := blockC; col < blockC+3; col++ {
+					assert.Equal(t, true, s.cells[row][col].hasCandidate(N))
+				}
+			}
+		}
+
+		apply(t, claimingPair, s)
+
+		for row := blockR; row < blockR+3; row++ {
+			if row != trow {
+				for col := blockC; col < blockC+3; col++ {
+					assert.Equal(t, false, s.cells[row][col].hasCandidate(N))
+				}
+			}
+		}
+
+		// second time should be no-op
+		noOpCheck(t, claimingPair, s)
+	})
+	t.Run("vertical claiming pairs should remove from block", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow := arbitraryRow()
+		tcol := arbitraryCol()
+		N := arbitraryValue()
+
+		// mark all cells in a column as unavailable for N except inside
+		// the test block
+		blockR, blockC := trow-(trow%3), tcol-(tcol%3)
+		for row := 0; row < 9; row++ {
+			outSideTestBlock := row/3 != blockR/3
+			if outSideTestBlock {
+				s.cells[row][tcol].removeCandidate(N)
+			}
+		}
+
+		for row := blockR; row < blockR+3; row++ {
+			for col := blockC; col < blockC+3; col++ {
+				if col != tcol {
+					assert.Equal(t, true, s.cells[row][col].hasCandidate(N))
+				}
+			}
+		}
+
+		apply(t, claimingPair, s)
+
+		for row := blockR; row < blockR+3; row++ {
+			for col := blockC; col < blockC+3; col++ {
+				if col != tcol {
+					assert.Equal(t, false, s.cells[row][col].hasCandidate(N))
+				}
+			}
+		}
+
+		// second time should be no-op
+		noOpCheck(t, claimingPair, s)
+	})
+}
+
 func arbitraryRow() int {
 	r := rand.Intn(9)
 	log.Println("using row:", r)
