@@ -3,6 +3,7 @@ package sodacouplib
 import (
 	"log"
 	"math"
+	"math/bits"
 )
 
 type sudokuAlgo func(*SudokuSquare) (bool, error)
@@ -229,4 +230,37 @@ func claimingPair(sud *SudokuSquare) (bool, error) {
 		}
 	}
 	return changes, nil
+}
+
+// if two values are unique to two cells already then they cannot go in elsewhere
+func nakedPair(sud *SudokuSquare) (bool, error) {
+	return applyToNonagons(sud, func(nona nonagon) (bool, error) {
+		changes := false
+		mc := make(map[uint16]int)
+
+		for _, cell := range nona.cells {
+			if !cell.isSet {
+				mc[cell.candidates]++
+			}
+		}
+
+		for mask, count := range mc {
+			hasNakedPair := count == 2 && bits.OnesCount16(mask) == 2
+			if hasNakedPair {
+				impacting := false
+				for _, cell := range nona.cells {
+					if !cell.isSet && cell.candidates&mask > 0 && cell.candidates != mask {
+						cell.candidates = cell.candidates &^ mask
+						impacting = true
+					}
+				}
+				if impacting {
+					log.Printf("%s naked pair for candidates %s", nona.name, maskToString(mask))
+				}
+				changes = changes || impacting
+			}
+		}
+
+		return changes, nil
+	})
 }

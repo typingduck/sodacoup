@@ -319,6 +319,136 @@ func TestClaimingPair(t *testing.T) {
 	})
 }
 
+func TestNakedPair(t *testing.T) {
+	t.Run("horizontal naked pair", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow := arbitraryRow()
+		tcol1, tcol2 := arbitraryTwoCols()
+		N1, N2 := arbitraryTwoValues()
+
+		for n := 1; n <= 9; n++ {
+			if n != N1 && n != N2 {
+				s.cells[trow][tcol1].removeCandidate(n)
+				s.cells[trow][tcol2].removeCandidate(n)
+			}
+		}
+
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 {
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N1))
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N2))
+			} else {
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N1))
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N2))
+			}
+		}
+
+		apply(t, nakedPair, s)
+
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 {
+				// should remove the pair as candidates, and leave the rest
+				assert.Equal(t, false, s.cells[trow][col].hasCandidate(N1))
+				assert.Equal(t, false, s.cells[trow][col].hasCandidate(N2))
+				for n := 1; n <= 9; n++ {
+					if n != N1 && n != N2 {
+						assert.Equal(t, true, s.cells[trow][col].hasCandidate(n))
+					}
+				}
+			} else {
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N1))
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N2))
+			}
+		}
+
+		// should be no-op second time
+		noOpCheck(t, nakedPair, s)
+	})
+	t.Run("vertical naked pair", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow1, trow2 := arbitraryTwoRows()
+		tcol := arbitraryCol()
+		N1, N2 := arbitraryTwoValues()
+
+		for n := 1; n <= 9; n++ {
+			if n != N1 && n != N2 {
+				s.cells[trow1][tcol].removeCandidate(n)
+				s.cells[trow2][tcol].removeCandidate(n)
+			}
+		}
+
+		for row := 0; row < 9; row++ {
+			if row != trow1 && row != trow2 {
+				assert.Equal(t, true, s.cells[row][tcol].hasCandidate(N1))
+				assert.Equal(t, true, s.cells[row][tcol].hasCandidate(N2))
+			}
+		}
+
+		apply(t, nakedPair, s)
+
+		for row := 0; row < 9; row++ {
+			if row != trow1 && row != trow2 {
+				assert.Equal(t, false, s.cells[row][tcol].hasCandidate(N1))
+				assert.Equal(t, false, s.cells[row][tcol].hasCandidate(N2))
+				for n := 1; n <= 9; n++ {
+					if n != N1 && n != N2 {
+						assert.Equal(t, true, s.cells[row][tcol].hasCandidate(n))
+					}
+				}
+			}
+		}
+
+		// should be no-op second time
+		noOpCheck(t, nakedPair, s)
+	})
+	t.Run("block naked pair", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow1, trow2 := arbitraryTwoRowsSameBlock()
+		tcol1, tcol2 := arbitraryTwoColsSameBlock()
+		N1, N2 := arbitraryTwoValues()
+
+		for n := 1; n <= 9; n++ {
+			if n != N1 && n != N2 {
+				s.cells[trow1][tcol1].removeCandidate(n)
+				s.cells[trow2][tcol2].removeCandidate(n)
+			}
+		}
+
+		blockR, blockC := trow1-(trow1%3), tcol1-(tcol1%3)
+		for row := blockR; row < blockR+3; row++ {
+			for col := blockC; col < blockC+3; col++ {
+				if (row != trow1 || col != tcol1) && (row != trow2 || col != tcol2) {
+					assert.Equal(t, true, s.cells[row][col].hasCandidate(N1))
+					assert.Equal(t, true, s.cells[row][col].hasCandidate(N2))
+				} else {
+					assert.Equal(t, true, s.cells[row][col].hasCandidate(N1))
+					assert.Equal(t, true, s.cells[row][col].hasCandidate(N2))
+				}
+			}
+		}
+
+		apply(t, nakedPair, s)
+
+		for row := blockR; row < blockR+3; row++ {
+			for col := blockC; col < blockC+3; col++ {
+				if (row != trow1 || col != tcol1) && (row != trow2 || col != tcol2) {
+					assert.Equal(t, false, s.cells[row][col].hasCandidate(N1))
+					assert.Equal(t, false, s.cells[row][col].hasCandidate(N2))
+				} else {
+					assert.Equal(t, true, s.cells[row][col].hasCandidate(N1))
+					assert.Equal(t, true, s.cells[row][col].hasCandidate(N2))
+				}
+			}
+		}
+
+		// should be no-op second time
+		noOpCheck(t, nakedPair, s)
+	})
+}
+
 func arbitraryRow() int {
 	r := rand.Intn(9)
 	log.Println("using row:", r)
@@ -361,6 +491,12 @@ func arbitraryTwoRows() (int, int) {
 	r1, r2 := rand2N()
 	log.Println("using rows:", r1, r2)
 	return r1, r2
+}
+
+func arbitraryTwoCols() (int, int) {
+	c1, c2 := rand2N()
+	log.Println("using cols:", c1, c2)
+	return c1, c2
 }
 
 func arbitraryTwoRowsSameBlock() (int, int) {
