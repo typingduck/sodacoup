@@ -449,6 +449,115 @@ func TestNakedPair(t *testing.T) {
 	})
 }
 
+func TestHiddenPair(t *testing.T) {
+	t.Run("row hidden pair", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow := arbitraryRow()
+		tcol1, tcol2 := arbitraryTwoCols()
+		N1, N2 := arbitraryTwoValues()
+
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 {
+				s.cells[trow][col].removeCandidate(N1)
+				s.cells[trow][col].removeCandidate(N2)
+			}
+		}
+
+		for n := 1; n <= 9; n++ {
+			if n != N1 && n != N2 {
+				assert.Equal(t, true, s.cells[trow][tcol1].hasCandidate(n))
+				assert.Equal(t, true, s.cells[trow][tcol2].hasCandidate(n))
+			}
+		}
+
+		apply(t, hiddenPair, s)
+
+		for n := 1; n <= 9; n++ {
+			if n != N1 && n != N2 {
+				assert.Equal(t, false, s.cells[trow][tcol1].hasCandidate(n))
+				assert.Equal(t, false, s.cells[trow][tcol2].hasCandidate(n))
+			}
+		}
+
+		// should be no-op second time
+		noOpCheck(t, hiddenPair, s)
+	})
+	t.Run("column hidden pair", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow1, trow2 := arbitraryTwoRows()
+		tcol := arbitraryCol()
+		N1, N2 := arbitraryTwoValues()
+
+		for row := 0; row < 9; row++ {
+			if row != trow1 && row != trow2 {
+				s.cells[row][tcol].removeCandidate(N1)
+				s.cells[row][tcol].removeCandidate(N2)
+			}
+		}
+
+		for n := 1; n <= 9; n++ {
+			if n != N1 && n != N2 {
+				assert.Equal(t, true, s.cells[trow1][tcol].hasCandidate(n))
+				assert.Equal(t, true, s.cells[trow2][tcol].hasCandidate(n))
+			}
+		}
+
+		apply(t, hiddenPair, s)
+
+		for n := 1; n <= 9; n++ {
+			if n != N1 && n != N2 {
+				assert.Equal(t, false, s.cells[trow1][tcol].hasCandidate(n))
+				assert.Equal(t, false, s.cells[trow2][tcol].hasCandidate(n))
+			}
+		}
+
+		// should be no-op second time
+		noOpCheck(t, hiddenPair, s)
+	})
+	t.Run("block hidden pair", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		// given two candidates and two cells inside a block
+		trow1, trow2 := arbitraryTwoRowsSameBlock()
+		tcol1, tcol2 := arbitraryTwoColsSameBlock()
+		N1, N2 := arbitraryTwoValues()
+
+		// and all the other cells do not have have those two candidates
+		blockR, blockC := trow1-(trow1%3), tcol1-(tcol1%3)
+		for row := blockR; row < blockR+3; row++ {
+			for col := blockC; col < blockC+3; col++ {
+				if (row != trow1 || col != tcol1) && (row != trow2 || col != tcol2) {
+					s.cells[row][col].removeCandidate(N1)
+					s.cells[row][col].removeCandidate(N2)
+				}
+			}
+		}
+
+		for n := 1; n <= 9; n++ {
+			if n != N1 && n != N2 {
+				assert.Equal(t, true, s.cells[trow1][tcol1].hasCandidate(n))
+				assert.Equal(t, true, s.cells[trow2][tcol2].hasCandidate(n))
+			}
+		}
+
+		// then applying hidden pair
+		apply(t, hiddenPair, s)
+
+		// should remove all other candidates from the two cells
+		for n := 1; n <= 9; n++ {
+			if n != N1 && n != N2 {
+				assert.Equal(t, false, s.cells[trow1][tcol1].hasCandidate(n))
+				assert.Equal(t, false, s.cells[trow2][tcol2].hasCandidate(n))
+			}
+		}
+
+		// should be no-op second time
+		noOpCheck(t, hiddenPair, s)
+	})
+}
+
 func arbitraryRow() int {
 	r := rand.Intn(9)
 	log.Println("using row:", r)

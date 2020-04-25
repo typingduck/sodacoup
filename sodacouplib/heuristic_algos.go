@@ -264,3 +264,48 @@ func nakedPair(sud *SudokuSquare) (bool, error) {
 		return changes, nil
 	})
 }
+
+// if two values can only go into the same two cells then
+// remove other values from those two cells
+func hiddenPair(sud *SudokuSquare) (bool, error) {
+	return applyToNonagons(sud, func(nona nonagon) (bool, error) {
+		changes := false
+		for v1 := 1; v1 <= 9; v1++ {
+			for v2 := 1; v2 < v1; v2++ {
+				mismatch := false
+				matchCnt := 0
+				for _, cell := range nona.cells {
+					b1 := cell.hasCandidate(v1)
+					b2 := cell.hasCandidate(v2)
+					if b1 && b2 {
+						matchCnt++
+					} else if b1 || b2 {
+						mismatch = true
+						break
+					}
+				}
+				if !mismatch && matchCnt == 2 {
+					impacting := false
+					for idx := 0; idx < 9; idx++ {
+						cell := nona.cells[idx]
+						if cell.hasCandidate(v1) && cell.hasCandidate(v2) {
+							for v3 := 1; v3 <= 9; v3++ {
+								if v3 != v1 && v3 != v2 {
+									if cell.hasCandidate(v3) {
+										cell.removeCandidate(v3)
+										impacting = true
+									}
+								}
+							}
+						}
+					}
+					if impacting {
+						log.Printf("%s hidden pair for values %d&%d", nona.name, v2, v1)
+					}
+					changes = changes || impacting
+				}
+			}
+		}
+		return changes, nil
+	})
+}
