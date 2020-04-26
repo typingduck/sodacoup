@@ -309,3 +309,87 @@ func hiddenPair(sud *SudokuSquare) (bool, error) {
 		return changes, nil
 	})
 }
+
+// if two rows have identical two remaining cells for a candidate then
+// they form a square that removes that candidate from the perpendicular columns
+// (and vice/versa for columns).
+func xWing(sud *SudokuSquare) (bool, error) {
+	changes := false
+	// row based
+	for r1 := 0; r1 < 9; r1++ {
+		for r2 := r1 + 1; r2 < 9; r2++ {
+			for val := 1; val <= 9; val++ {
+				impacting := false
+				matchCount := 0
+				for col := 0; col < 9 && matchCount <= 2; col++ {
+					b1 := sud.cells[r1][col].hasCandidate(val)
+					b2 := sud.cells[r2][col].hasCandidate(val)
+					if b1 && b2 {
+						matchCount++
+					} else if b1 || b2 {
+						matchCount = 0
+						break
+					}
+				}
+				xWingFound := matchCount == 2
+				if xWingFound {
+					for col := 0; col < 9; col++ {
+						if sud.cells[r1][col].hasCandidate(val) && sud.cells[r2][col].hasCandidate(val) {
+							for r := 0; r < 9; r++ {
+								if r != r1 && r != r2 {
+									if sud.cells[r][col].hasCandidate(val) {
+										sud.cells[r][col].removeCandidate(val)
+										impacting = true
+									}
+								}
+							}
+						}
+					}
+				}
+				if impacting {
+					log.Printf("row %d and row %d have xwing for value %d", r1, r2, val)
+					changes = true
+				}
+			}
+		}
+	}
+	// column based
+	for c1 := 0; c1 < 9; c1++ {
+		for c2 := c1 + 1; c2 < 9; c2++ {
+			for val := 1; val <= 9; val++ {
+				impacting := false
+				matchCount := 0
+				for row := 0; row < 9 && matchCount <= 2; row++ {
+					b1 := sud.cells[row][c1].hasCandidate(val)
+					b2 := sud.cells[row][c2].hasCandidate(val)
+					if b1 && b2 {
+						matchCount++
+					} else if b1 || b2 {
+						matchCount = 0
+						break
+					}
+				}
+				xWingFound := matchCount == 2
+				if xWingFound {
+					for row := 0; row < 9 && matchCount <= 2; row++ {
+						if sud.cells[row][c1].hasCandidate(val) && sud.cells[row][c2].hasCandidate(val) {
+							for c := 0; c < 9; c++ {
+								if c != c1 && c != c2 {
+									if sud.cells[row][c].hasCandidate(val) {
+										sud.cells[row][c].removeCandidate(val)
+										impacting = true
+									}
+								}
+							}
+						}
+					}
+				}
+				if impacting {
+					log.Printf("col %d and col %d have xwing for value %d", c1, c2, val)
+					changes = true
+				}
+			}
+		}
+	}
+	return changes, nil
+}

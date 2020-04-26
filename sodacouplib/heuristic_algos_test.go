@@ -558,6 +558,122 @@ func TestHiddenPair(t *testing.T) {
 	})
 }
 
+func TestXWing(t *testing.T) {
+	t.Run("row based xwing", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		// given two rows that have two parallel remaining cells slots
+		// for a candidate
+		trow1, trow2 := arbitraryTwoRows()
+		tcol1, tcol2 := arbitraryTwoCols()
+		N := arbitraryValue()
+
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 {
+				s.cells[trow1][col].removeCandidate(N)
+				s.cells[trow2][col].removeCandidate(N)
+			}
+		}
+
+		for row := 0; row < 9; row++ {
+			if row != trow1 && row != trow2 {
+				assert.Equal(t, true, s.cells[row][tcol1].hasCandidate(N))
+				assert.Equal(t, true, s.cells[row][tcol2].hasCandidate(N))
+			}
+		}
+
+		// then xwing algorithm
+		apply(t, xWing, s)
+
+		// should remove that candidate from same columns on other rows
+		for row := 0; row < 9; row++ {
+			if row != trow1 && row != trow2 {
+				assert.Equal(t, false, s.cells[row][tcol1].hasCandidate(N))
+				assert.Equal(t, false, s.cells[row][tcol2].hasCandidate(N))
+			}
+		}
+
+		// should be no-op second time
+		noOpCheck(t, xWing, s)
+	})
+	t.Run("col based xwing", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		// given two columns that have two parallel remaining cells slots
+		// for a candidate
+		trow1, trow2 := arbitraryTwoRows()
+		tcol1, tcol2 := arbitraryTwoCols()
+		N := arbitraryValue()
+
+		for row := 0; row < 9; row++ {
+			if row != trow1 && row != trow2 {
+				s.cells[row][tcol1].removeCandidate(N)
+				s.cells[row][tcol2].removeCandidate(N)
+			}
+		}
+
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 {
+				assert.Equal(t, true, s.cells[trow1][col].hasCandidate(N))
+				assert.Equal(t, true, s.cells[trow2][col].hasCandidate(N))
+			}
+		}
+
+		// then xwing algorithm
+		apply(t, xWing, s)
+
+		// should remove that candidate from same rows on other columns
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 {
+				assert.Equal(t, false, s.cells[trow1][col].hasCandidate(N))
+				assert.Equal(t, false, s.cells[trow2][col].hasCandidate(N))
+			}
+		}
+
+		// and should be no-op second time
+		noOpCheck(t, xWing, s)
+	})
+	t.Run("sample xwing problem", func(t *testing.T) {
+		problem := `
+			___ __5 __9
+			_8_ 4__ ___
+			___ _7_ __4
+			
+			_32 748 9__
+			__6 539 _42
+			___ 216 37_
+			
+			__4 _57 293
+			__5 _21 4_7
+			2__ __4 ___
+		`
+		expectedStep := `
+			___ _85 __9
+			_8_ 4__ ___
+			___ _7_ __4
+			
+			_32 748 9__
+			__6 539 _42
+			___ 216 37_
+			
+			__4 _57 293
+			__5 _21 4_7
+			2__ __4 ___
+		`
+		s, err := NewSudokuSquare(problem)
+		if err != nil {
+			t.Fatal("got unexpected error from valid input:", err)
+		}
+
+		apply(t, xWing, s)
+		apply(t, hiddenSingle, s)
+
+		expected, _ := FormatSudoku(expectedStep)
+		actual, _ := FormatSudoku(s.String())
+		assert.Equal(t, expected, actual)
+	})
+}
+
 func arbitraryRow() int {
 	r := rand.Intn(9)
 	log.Println("using row:", r)
