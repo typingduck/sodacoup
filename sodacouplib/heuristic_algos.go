@@ -393,3 +393,48 @@ func xWing(sud *SudokuSquare) (bool, error) {
 	}
 	return changes, nil
 }
+
+// if two values are unique to two cells already then they cannot go in elsewhere
+func nakedTriple(sud *SudokuSquare) (bool, error) {
+	return applyToNonagons(sud, func(nona nonagon) (bool, error) {
+		changes := false
+		mc := make(map[uint16]int)
+
+		for _, cell := range nona.cells {
+			if !cell.isSet {
+				numCans := bits.OnesCount16(cell.candidates)
+				if numCans == 3 {
+					mc[cell.candidates]++
+				} else if numCans == 2 {
+					for n := 1; n <= 9; n++ {
+						msk := uint16(1 << n)
+						if msk&cell.candidates == 0 {
+							mc[msk|cell.candidates]++
+						}
+					}
+				}
+			}
+		}
+
+		for mask, count := range mc {
+			hasNakedTriple := count == 3 && bits.OnesCount16(mask) == 3
+			if hasNakedTriple {
+				impacting := false
+				for _, cell := range nona.cells {
+					notTripletCell := cell.candidates&^mask > 0
+					hasTripletCandidates := cell.candidates&mask > 0
+					if !cell.isSet && notTripletCell && hasTripletCandidates {
+						cell.candidates = cell.candidates &^ mask
+						impacting = true
+					}
+				}
+				if impacting {
+					log.Printf("%s naked triple for candidates %s", nona.name, maskToString(mask))
+				}
+				changes = changes || impacting
+			}
+		}
+
+		return changes, nil
+	})
+}

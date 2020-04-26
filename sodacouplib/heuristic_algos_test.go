@@ -674,6 +674,132 @@ func TestXWing(t *testing.T) {
 	})
 }
 
+func TestNakedTriple(t *testing.T) {
+	t.Run("naked triple with 3 candidate pairs", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow := arbitraryRow()
+		tcol1, tcol2, tcol3 := 1, 5, 6
+		N1, N2, N3 := 1, 6, 7
+
+		tripleCell1 := &s.cells[trow][tcol1]
+		tripleCell2 := &s.cells[trow][tcol2]
+		tripleCell3 := &s.cells[trow][tcol3]
+
+		tripleCell1.candidates = 1<<N1 | 1<<N2
+		tripleCell2.candidates = 1<<N2 | 1<<N3
+		tripleCell3.candidates = 1<<N3 | 1<<N1
+
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 && col != tcol3 {
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N1))
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N2))
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N3))
+			}
+		}
+
+		apply(t, nakedTriple, s)
+
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 && col != tcol3 {
+				// should remove the triple as candidates, and leave the rest
+				assert.Equal(t, false, s.cells[trow][col].hasCandidate(N1))
+				assert.Equal(t, false, s.cells[trow][col].hasCandidate(N2))
+				assert.Equal(t, false, s.cells[trow][col].hasCandidate(N3))
+				for n := 1; n <= 9; n++ {
+					if n != N1 && n != N2 && n != N3 {
+						assert.Equal(t, true, s.cells[trow][col].hasCandidate(n))
+					}
+				}
+			}
+		}
+		assert.Equal(t, true, s.cells[trow][tcol1].hasCandidate(N1))
+		assert.Equal(t, true, s.cells[trow][tcol1].hasCandidate(N2))
+		assert.Equal(t, true, s.cells[trow][tcol2].hasCandidate(N2))
+		assert.Equal(t, true, s.cells[trow][tcol2].hasCandidate(N3))
+		assert.Equal(t, true, s.cells[trow][tcol3].hasCandidate(N3))
+		assert.Equal(t, true, s.cells[trow][tcol3].hasCandidate(N1))
+
+		// should be no-op second time
+		noOpCheck(t, nakedTriple, s)
+	})
+	t.Run("naked triple with 2 candidate pairs and a triple cell", func(t *testing.T) {
+		s := newEmptySudoku()
+
+		trow := arbitraryRow()
+		tcol1, tcol2, tcol3 := 1, 5, 6
+		N1, N2, N3 := 1, 6, 7
+
+		tripleCell1 := &s.cells[trow][tcol1]
+		tripleCell2 := &s.cells[trow][tcol2]
+		tripleCell3 := &s.cells[trow][tcol3]
+
+		tripleCell1.candidates = 1<<N1 | 1<<N2
+		tripleCell2.candidates = 1<<N2 | 1<<N3
+		tripleCell3.candidates = 1<<N1 | 1<<N2 | 1<<N3
+
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 && col != tcol3 {
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N1))
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N2))
+				assert.Equal(t, true, s.cells[trow][col].hasCandidate(N3))
+			}
+		}
+
+		apply(t, nakedTriple, s)
+
+		for col := 0; col < 9; col++ {
+			if col != tcol1 && col != tcol2 && col != tcol3 {
+				// should remove the triple as candidates, and leave the rest
+				assert.Equal(t, false, s.cells[trow][col].hasCandidate(N1))
+				assert.Equal(t, false, s.cells[trow][col].hasCandidate(N2))
+				assert.Equal(t, false, s.cells[trow][col].hasCandidate(N3))
+				for n := 1; n <= 9; n++ {
+					if n != N1 && n != N2 && n != N3 {
+						assert.Equal(t, true, s.cells[trow][col].hasCandidate(n))
+					}
+				}
+			}
+		}
+
+		// should be no-op second time
+		noOpCheck(t, nakedTriple, s)
+	})
+	t.Run("naked triple example", func(t *testing.T) {
+		initial := `
+			___ _5_ _67
+			37_ 4__ 5_8
+			_5_ 7_9 __4
+			
+			53_ 697 48_
+			8_7 5__ 63_
+			___ ___ 75_
+			
+			7__ 325 846
+			465 871 __3
+			283 9__ 175
+
+		`
+		s, err := NewSudokuSquare(initial)
+		if err != nil {
+			t.Fatal("got unexpected error from valid input:", err)
+		}
+
+		cell := &s.cells[2][4]
+		assert.Equal(t, false, cell.isSet)
+		assert.Equal(t, true, cell.hasCandidate(1))
+		assert.Equal(t, true, cell.hasCandidate(6))
+
+		apply(t, nakedTriple, s)
+
+		assert.Equal(t, false, cell.hasCandidate(1))
+		assert.Equal(t, false, cell.hasCandidate(6))
+
+		// second time should be no-op
+		noOpCheck(t, nakedTriple, s)
+	})
+}
+
 func arbitraryRow() int {
 	r := rand.Intn(9)
 	log.Println("using row:", r)
