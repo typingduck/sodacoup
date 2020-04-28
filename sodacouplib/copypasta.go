@@ -6,9 +6,12 @@ package sodacouplib
 // a dependency on for now.
 
 import (
+	"log"
+	"math/rand"
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -24,4 +27,10 @@ func removeWhitespace(s string) string {
 
 func getFunctionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+func RandomSeed() {
+	seed := time.Now().UTC().UnixNano()
+	log.Println("using seed", seed)
+	rand.Seed(seed)
 }

@@ -73,6 +73,19 @@ func newEmptySudoku() *SudokuSquare {
 
 // Solve does the magic.
 func (sud *SudokuSquare) Solve() error {
+	solved, e := trySolveWithHeuristics(sud)
+	if e != nil {
+		return e
+	} else if solved {
+		return nil
+	}
+
+	log.Println("Unsolved by heuristics. Applying backtracking.")
+	_, e = backTrack(sud)
+	return e
+}
+
+func trySolveWithHeuristics(sud *SudokuSquare) (bool, error) {
 	heuristicAlgorithms := []sudokuAlgo{
 		sanityCheck,
 		nakedSingle,
@@ -98,16 +111,7 @@ func (sud *SudokuSquare) Solve() error {
 		}
 		return !changesMade, nil
 	})
-	if e != nil {
-		return e
-	}
-
-	if !isSolved(sud) {
-		log.Println("Unsolved by heuristics. Applying backtracking.")
-		_, e := backTrack(sud)
-		return e
-	}
-	return nil
+	return isSolved(sud), e
 }
 
 func (sud SudokuSquare) String() string {
@@ -156,6 +160,18 @@ func FormatSudoku(s string) (string, error) {
 		}
 	}
 	return string(o), nil
+}
+
+func (sud *SudokuSquare) SetCount() int {
+	cnt := 0
+	for r := 0; r < 9; r++ {
+		for c := 0; c < 9; c++ {
+			if sud.cells[r][c].isSet {
+				cnt++
+			}
+		}
+	}
+	return cnt
 }
 
 // Format a sudoku as a table with lines between blocks.

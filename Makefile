@@ -7,6 +7,9 @@ build: sodacoup generator
 sodacoup: sodacoup.go go* sodacouplib/*.go
 	go build sodacoup.go
 
+generator: generator.go go* sodacouplib/*.go
+	go build generator.go
+
 test: *.go go* sodacouplib/*.go
 	go test ./sodacouplib/...
 
